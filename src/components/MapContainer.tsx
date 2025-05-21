@@ -1,5 +1,3 @@
-// src/components/MapContainer.tsx
-
 import React, { useState, useRef, useEffect } from 'react';
 import {
   GoogleMap,
@@ -13,7 +11,7 @@ import SearchBox from './SearchBox';
 import AccidentModal from './AccidentModal';
 
 interface MapContainerProps {
-  center: { lat: number; lng: number };
+  center?: { lat: number; lng: number };
   zoom?: number;
   onPlaceSelected?: (place: google.maps.places.PlaceResult) => void;
 }
@@ -29,8 +27,80 @@ const getColorForRisk = (risk: number): string => {
   return `rgb(${r},${g},0)`;
 };
 
+const defaultMapCenter = { lat: -9.19, lng: -75.015 }; // Centered in Peru
+
+const darkMapStyle: google.maps.MapTypeStyle[] = [
+  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+  {
+    featureType: "administrative.locality",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "poi",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "road",
+    elementType: "geometry",
+    stylers: [{ color: "#38414e" }],
+  },
+  {
+    featureType: "road",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#212a37" }],
+  },
+  {
+    featureType: "road",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#9ca5b3" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry",
+    stylers: [{ color: "#746855" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "geometry.stroke",
+    stylers: [{ color: "#1f2835" }],
+  },
+  {
+    featureType: "road.highway",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#f3d19c" }],
+  },
+  {
+    featureType: "transit",
+    elementType: "geometry",
+    stylers: [{ color: "#2f3948" }],
+  },
+  {
+    featureType: "transit.station",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#d59563" }],
+  },
+  {
+    featureType: "water",
+    elementType: "geometry",
+    stylers: [{ color: "#17263c" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.fill",
+    stylers: [{ color: "#515c6d" }],
+  },
+  {
+    featureType: "water",
+    elementType: "labels.text.stroke",
+    stylers: [{ color: "#17263c" }],
+  },
+];
+
 const MapContainer: React.FC<MapContainerProps> = ({
-  center,
+  center = defaultMapCenter, // Use default center if none provided
   zoom = 12,
   onPlaceSelected
 }) => {
@@ -47,6 +117,25 @@ const MapContainer: React.FC<MapContainerProps> = ({
   const [historyData, setHistoryData] = useState<MockHistoryData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Function to perform reverse geocoding
+  const getAddressFromLatLng = async (lat: number, lng: number): Promise<string | null> => {
+    if (!isLoaded) return null; // Ensure maps API is loaded
+    const geocoder = new google.maps.Geocoder();
+    const latlng = { lat, lng };
+    try {
+      const response = await geocoder.geocode({ location: latlng });
+      if (response.results && response.results[0]) {
+        return response.results[0].formatted_address;
+      } else {
+        console.warn("No results found for reverse geocoding");
+        return null;
+      }
+    } catch (error) {
+      console.error("Geocoder failed due to: ", error);
+      return null;
+    }
+  };
+
   const handleMapClick = async (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const lat = event.latLng.lat();
@@ -55,7 +144,10 @@ const MapContainer: React.FC<MapContainerProps> = ({
       const mapPredictions = getMockMapPredictions(lat, lng);
       setPredictions(mapPredictions);
 
-      const singlePrediction = getMockSinglePrediction(lat, lng);
+      // Get address from coordinates
+      const address = await getAddressFromLatLng(lat, lng);
+
+      const singlePrediction = getMockSinglePrediction(lat, lng, address || undefined);
       setSelectedPrediction(singlePrediction);
 
       const fetchedHistoryData = getMockHistoryData();
@@ -144,6 +236,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         onUnmount={handleOnUnmount}
         onClick={handleMapClick}
         options={{
+          styles: darkMapStyle, // Apply the dark map style
           restriction: {
             latLngBounds: {
               north: -0.04,

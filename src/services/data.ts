@@ -1,5 +1,3 @@
-// src/services/data.ts
-
 export interface MockPrediction {
   lat: number;
   lng: number;
@@ -23,12 +21,12 @@ export interface MockHistoryData {
 }
 
 // Function to generate a single mock prediction for the modal
-export const getMockSinglePrediction = (lat: number, lng: number): MockPrediction => {
+export const getMockSinglePrediction = (lat: number, lng: number, geocodedAddress?: string): MockPrediction => {
   return {
     lat: lat, 
     lng: lng,
     risk: Math.random(),
-    address: `Calle Ficticia ${Math.floor(Math.random() * 1000)}, Lima`,
+    address: geocodedAddress || `Calle Ficticia ${Math.floor(Math.random() * 1000)}, Lima`, // Use geocoded address or fallback
   };
 };
 
