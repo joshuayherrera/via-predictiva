@@ -9,6 +9,8 @@ interface AccidentModalProps {
   onClose: () => void;
   prediction: MockPrediction | null;
   historyData: MockHistoryData | null;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
 const modalStyle: React.CSSProperties = {
@@ -50,7 +52,7 @@ const getRiskLevelText = (risk: number): string => {
   return 'Bajo';
 };
 
-const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, prediction, historyData }) => {
+const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, prediction, historyData, isLoading, error }) => {
   if (!isOpen) {
     return null;
   }
@@ -78,10 +80,35 @@ const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, predicti
           Análisis de Riesgo de Accidente
         </h2>
         
-        {prediction ? (
+        {isLoading && (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <p>Cargando predicción...</p>
+          </div>
+        )}
+        
+        {error && (
+          <div style={{ textAlign: 'center', padding: '10px', backgroundColor: '#ffebee', color: '#c62828', borderRadius: '4px', marginBottom: '15px' }}>
+            <p>{error}</p>
+          </div>
+        )}
+        
+        {prediction && !isLoading && (
           <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '6px' }}>
             <p><strong>Ubicación:</strong> Lat: {prediction.lat.toFixed(5)}, Lng: {prediction.lng.toFixed(5)}</p>
             <p><strong>Dirección Estimada:</strong> {prediction.address || 'No disponible'}</p>
+            
+            {prediction.departamento && (
+              <p><strong>Región:</strong> {prediction.departamento}, {prediction.provincia}, {prediction.distrito}</p>
+            )}
+
+            {prediction.severity !== undefined && (
+              <p><strong>Severidad Predicha:</strong> {prediction.severity.toFixed(2)}</p>
+            )}
+
+            {prediction.dangerProbability && (
+              <p><strong>Probabilidad Peligrosa:</strong> {prediction.dangerProbability}</p>
+            )}
+            
             <p style={{ marginTop: '10px' }}>
               <strong>Nivel de Riesgo: </strong> 
               <span style={{ 
@@ -91,11 +118,25 @@ const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, predicti
                 borderRadius: '4px',
                 backgroundColor: getRiskColor(prediction.risk) + '20' // Light background tint
               }}>
-                {prediction.risk.toFixed(2)} ({getRiskLevelText(prediction.risk)})
+                {prediction.riskLevel || getRiskLevelText(prediction.risk)}
               </span>
             </p>
+            
+            {prediction.dangerZone !== undefined && (
+              <p style={{ marginTop: '5px' }}>
+                <strong>Zona Peligrosa: </strong>
+                <span style={{ 
+                  color: prediction.dangerZone ? '#d32f2f' : '#388e3c',
+                  fontWeight: 'bold'
+                }}>
+                  {prediction.dangerZone ? 'Sí' : 'No'}
+                </span>
+              </p>
+            )}
           </div>
-        ) : (
+        )}
+
+        {!prediction && !isLoading && (
           <p style={{ textAlign: 'center', color: '#666' }}>No hay datos de predicción para el punto seleccionado.</p>
         )}
 

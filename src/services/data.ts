@@ -1,8 +1,17 @@
+import type { PredictionResponse } from './api';
+
 export interface MockPrediction {
   lat: number;
   lng: number;
   risk: number; // 0 to 1
-  address?: string; 
+  address?: string;
+  severity?: number;
+  dangerProbability?: string;
+  dangerZone?: boolean;
+  riskLevel?: string;
+  departamento?: string;
+  provincia?: string;
+  distrito?: string; 
 }
 
 export interface TimeSeriesDataPoint {
@@ -19,6 +28,32 @@ export interface MockHistoryData {
   timeSeries: TimeSeriesDataPoint[];
   modalities: ModalityDataPoint[];
 }
+
+// Transform API response to our app's format
+export const transformPredictionResponse = (response: PredictionResponse, address?: string): MockPrediction => {
+  // Convert risk string to numerical value between 0-1 for color mapping
+  let riskValue = 0;
+  switch (response.RIESGO) {
+    case "BAJO": riskValue = 0.2; break;
+    case "MEDIO": riskValue = 0.5; break;
+    case "ALTO": riskValue = 0.8; break;
+    default: riskValue = 0.2;
+  }
+  
+  return {
+    lat: response.LATITUD,
+    lng: response.LONGITUD,
+    risk: riskValue,
+    address: address,
+    severity: response.SEVERIDAD_PREDICHA,
+    dangerProbability: response.PROBABILIDAD_PELIGROSA,
+    dangerZone: response.ZONA_PELIGROSA,
+    riskLevel: response.RIESGO,
+    departamento: response.DEPARTAMENTO,
+    provincia: response.PROVINCIA,
+    distrito: response.DISTRITO
+  };
+};
 
 // Function to generate a single mock prediction for the modal
 export const getMockSinglePrediction = (lat: number, lng: number, geocodedAddress?: string): MockPrediction => {

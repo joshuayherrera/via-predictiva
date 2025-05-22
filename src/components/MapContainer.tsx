@@ -6,7 +6,8 @@ import {
   MarkerClusterer
 } from '@react-google-maps/api';
 import type { MockPrediction, MockHistoryData } from '../services/data';
-import { getMockMapPredictions, getMockSinglePrediction, getMockHistoryData } from '../services/data';
+import { getMockMapPredictions, getMockSinglePrediction, getMockHistoryData, transformPredictionResponse } from '../services/data';
+import { sendPredictionRequest } from '../services/api';
 import SearchBox from './SearchBox';
 import AccidentModal from './AccidentModal';
 
@@ -116,6 +117,44 @@ const MapContainer: React.FC<MapContainerProps> = ({
   const [selectedPrediction, setSelectedPrediction] = useState<MockPrediction | null>(null);
   const [historyData, setHistoryData] = useState<MockHistoryData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Function to get location details from coordinates
+  const getLocationDetails = async (lat: number, lng: number): Promise<{ departamento: string, provincia: string, distrito: string } | null> => {
+    if (!isLoaded) return null;
+    const geocoder = new google.maps.Geocoder();
+    const latlng = { lat, lng };
+    
+    try {
+      const response = await geocoder.geocode({ location: latlng });
+      if (response.results && response.results.length > 0) {
+        // Try to extract administrative areas from the results
+        let departamento = "ANCASH"; // Default values
+        let provincia = "HUARMEY";
+        let distrito = "HUARMEY";
+        
+        // Parse address components to find administrative areas
+        const addressComponents = response.results[0].address_components;
+        for (const component of addressComponents) {
+          const types = component.types;
+          if (types.includes('administrative_area_level_1')) {
+            departamento = component.long_name.toUpperCase();
+          } else if (types.includes('administrative_area_level_2')) {
+            provincia = component.long_name.toUpperCase();
+          } else if (types.includes('administrative_area_level_3') || types.includes('locality')) {
+            distrito = component.long_name.toUpperCase();
+          }
+        }
+        
+        return { departamento, provincia, distrito };
+      }
+      return null;
+    } catch (error) {
+      console.error("Error in geocoding for location details:", error);
+      return null;
+    }
+  };
 
   // Function to perform reverse geocoding
   const getAddressFromLatLng = async (lat: number, lng: number): Promise<string | null> => {
@@ -140,20 +179,73 @@ const MapContainer: React.FC<MapContainerProps> = ({
     if (event.latLng) {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
-
-      const mapPredictions = getMockMapPredictions(lat, lng);
-      setPredictions(mapPredictions);
-
-      // Get address from coordinates
-      const address = await getAddressFromLatLng(lat, lng);
-
-      const singlePrediction = getMockSinglePrediction(lat, lng, address || undefined);
-      setSelectedPrediction(singlePrediction);
-
-      const fetchedHistoryData = getMockHistoryData();
-      setHistoryData(fetchedHistoryData);
-
-      setIsModalOpen(true);
+      
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        // Get address and location details
+        const address = await getAddressFromLatLng(lat, lng);
+        const locationDetails = await getLocationDetails(lat, lng);
+        
+        if (locationDetails) {
+          // Call the prediction API
+          const predictionData = {
+            LATITUD: lat,
+            LONGITUD: lng,
+            DEPARTAMENTO: locationDetails.departamento,
+            PROVINCIA: locationDetails.provincia,
+            DISTRITO: locationDetails.distrito
+          };
+          
+          const response = await sendPredictionRequest(predictionData);
+          
+          // Transform the response to our app's format
+          const predictionResult = transformPredictionResponse(response, address || undefined);
+          
+          // Set the single prediction for the modal
+          setSelectedPrediction(predictionResult);
+          
+          // Generate nearby predictions for the map
+          const mapPredictions = getMockMapPredictions(lat, lng);
+          setPredictions(mapPredictions);
+          
+          // Get mock history data (in a real app, this would come from the backend)
+          const fetchedHistoryData = getMockHistoryData();
+          setHistoryData(fetchedHistoryData);
+          
+          setIsModalOpen(true);
+        } else {
+          console.warn("Unable to determine location details");
+          // Fall back to mock data if we can't get location details
+          const singlePrediction = getMockSinglePrediction(lat, lng, address || undefined);
+          setSelectedPrediction(singlePrediction);
+          
+          const mapPredictions = getMockMapPredictions(lat, lng);
+          setPredictions(mapPredictions);
+          
+          const fetchedHistoryData = getMockHistoryData();
+          setHistoryData(fetchedHistoryData);
+          
+          setIsModalOpen(true);
+        }
+      } catch (err) {
+        console.error("Error processing prediction:", err);
+        setError("Error al obtener la predicción. Intente nuevamente.");
+        
+        // Fall back to mock data on error
+        const address = await getAddressFromLatLng(lat, lng);
+        const singlePrediction = getMockSinglePrediction(lat, lng, address || undefined);
+        setSelectedPrediction(singlePrediction);
+        
+        const mapPredictions = getMockMapPredictions(lat, lng);
+        setPredictions(mapPredictions);
+        
+        const fetchedHistoryData = getMockHistoryData();
+        setHistoryData(fetchedHistoryData);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -281,6 +373,8 @@ const MapContainer: React.FC<MapContainerProps> = ({
         onClose={closeModal}
         prediction={selectedPrediction}
         historyData={historyData}
+        isLoading={isLoading}
+        error={error}
       />
     </div>
   );
