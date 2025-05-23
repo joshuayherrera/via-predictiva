@@ -40,16 +40,22 @@ const backdropStyle: React.CSSProperties = {
   zIndex: 999,
 };
 
+// Función para convertir valor de riesgo numérico a color
+// Esta función se mantiene por compatibilidad con componentes que aún usan risk
+/* @ts-ignore*/
 const getRiskColor = (risk: number): string => {
   if (risk > 0.7) return '#d32f2f'; // Red
   if (risk > 0.4) return '#ffa000'; // Orange
   return '#388e3c'; // Green
 };
 
-const getRiskLevelText = (risk: number): string => {
-  if (risk > 0.7) return 'Alto';
-  if (risk > 0.4) return 'Medio';
-  return 'Bajo';
+// Función para obtener color basado en severidad textual
+const getSeverityColor = (severity: string): string => {
+  switch(severity?.toUpperCase()) {
+    case 'ALTA': return '#d32f2f'; // Red
+    case 'MEDIA': return '#ffa000'; // Orange
+    default: return '#388e3c'; // Green (for BAJA or default)
+  }
 };
 
 const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, prediction, historyData, isLoading, error }) => {
@@ -97,41 +103,61 @@ const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, predicti
             <p><strong>Ubicación:</strong> Lat: {prediction.lat.toFixed(5)}, Lng: {prediction.lng.toFixed(5)}</p>
             <p><strong>Dirección Estimada:</strong> {prediction.address || 'No disponible'}</p>
             
+            {prediction.typeOfRoad && prediction.roadNetwork && (
+              <p><strong>Tipo de Vía:</strong> {prediction.typeOfRoad} - {prediction.roadNetwork}</p>
+            )}
+            
             {prediction.departamento && (
               <p><strong>Región:</strong> {prediction.departamento}, {prediction.provincia}, {prediction.distrito}</p>
             )}
 
-            {prediction.severity !== undefined && (
-              <p><strong>Severidad Predicha:</strong> {prediction.severity.toFixed(2)}</p>
-            )}
-
-            {prediction.dangerProbability && (
-              <p><strong>Probabilidad Peligrosa:</strong> {prediction.dangerProbability}</p>
-            )}
-            
-            <p style={{ marginTop: '10px' }}>
-              <strong>Nivel de Riesgo: </strong> 
-              <span style={{ 
-                color: getRiskColor(prediction.risk), 
-                fontWeight: 'bold',
-                padding: '3px 8px',
-                borderRadius: '4px',
-                backgroundColor: getRiskColor(prediction.risk) + '20' // Light background tint
-              }}>
-                {prediction.riskLevel || getRiskLevelText(prediction.risk)}
-              </span>
-            </p>
-            
-            {prediction.dangerZone !== undefined && (
-              <p style={{ marginTop: '5px' }}>
-                <strong>Zona Peligrosa: </strong>
+            {prediction.severity && (
+              <p style={{ marginTop: '10px' }}>
+                <strong>Severidad Predicha: </strong> 
                 <span style={{ 
-                  color: prediction.dangerZone ? '#d32f2f' : '#388e3c',
-                  fontWeight: 'bold'
+                  color: getSeverityColor(prediction.severity), 
+                  fontWeight: 'bold',
+                  padding: '3px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: getSeverityColor(prediction.severity) + '20' // Light background tint
                 }}>
-                  {prediction.dangerZone ? 'Sí' : 'No'}
+                  {prediction.severity}
                 </span>
               </p>
+            )}
+
+            {prediction.probability && (
+              <p><strong>Probabilidad General:</strong> {prediction.probability}</p>
+            )}
+            
+            {(prediction.probabilityHigh || prediction.probabilityLow) && (
+              <div style={{ 
+                marginTop: '15px',
+                border: '1px solid #e0e0e0',
+                padding: '10px',
+                borderRadius: '4px',
+                backgroundColor: '#f5f5f5'
+              }}>
+                <p style={{ marginBottom: '8px', fontWeight: 'bold' }}>Detalle de Probabilidades:</p>
+                {prediction.probabilityHigh && (
+                  <p style={{ 
+                    marginLeft: '10px', 
+                    color: getSeverityColor('ALTA'),
+                    fontWeight: 'bold'
+                  }}>
+                    Alta: {prediction.probabilityHigh}
+                  </p>
+                )}
+                {prediction.probabilityLow && (
+                  <p style={{ 
+                    marginLeft: '10px',
+                    color: getSeverityColor('BAJA'),
+                    fontWeight: 'bold'
+                  }}>
+                    Baja: {prediction.probabilityLow}
+                  </p>
+                )}
+              </div>
             )}
           </div>
         )}

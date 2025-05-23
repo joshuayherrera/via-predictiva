@@ -121,7 +121,13 @@ const MapContainer: React.FC<MapContainerProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Function to get location details from coordinates
-  const getLocationDetails = async (lat: number, lng: number): Promise<{ departamento: string, provincia: string, distrito: string } | null> => {
+  const getLocationDetails = async (lat: number, lng: number): Promise<{ 
+    departamento: string, 
+    provincia: string, 
+    distrito: string,
+    tipoDeVia: string,
+    redVial: string
+  } | null> => {
     if (!isLoaded) return null;
     const geocoder = new google.maps.Geocoder();
     const latlng = { lat, lng };
@@ -129,10 +135,12 @@ const MapContainer: React.FC<MapContainerProps> = ({
     try {
       const response = await geocoder.geocode({ location: latlng });
       if (response.results && response.results.length > 0) {
-        // Try to extract administrative areas from the results
-        let departamento = "ANCASH"; // Default values
-        let provincia = "HUARMEY";
-        let distrito = "HUARMEY";
+        // Valores predeterminados
+        let departamento = "LIMA";
+        let provincia = "LIMA";
+        let distrito = "MIRAFLORES";
+        let tipoDeVia = "AVENIDA"; // Valor por defecto
+        let redVial = "URBANA";    // Valor por defecto
         
         // Parse address components to find administrative areas
         const addressComponents = response.results[0].address_components;
@@ -144,10 +152,23 @@ const MapContainer: React.FC<MapContainerProps> = ({
             provincia = component.long_name.toUpperCase();
           } else if (types.includes('administrative_area_level_3') || types.includes('locality')) {
             distrito = component.long_name.toUpperCase();
+          } else if (types.includes('route')) {
+            // Intentamos obtener información sobre la vía
+            const routeName = component.long_name.toUpperCase();
+            if (routeName.includes('AUTOPISTA') || routeName.includes('CARRETERA')) {
+              tipoDeVia = "CARRETERA";
+              redVial = "NACIONAL";
+            } else if (routeName.includes('CALLE')) {
+              tipoDeVia = "CALLE";
+            } else if (routeName.includes('JIRON') || routeName.includes('JR')) {
+              tipoDeVia = "JIRON";
+            } else {
+              tipoDeVia = "AVENIDA"; // Valor por defecto
+            }
           }
         }
         
-        return { departamento, provincia, distrito };
+        return { departamento, provincia, distrito, tipoDeVia, redVial };
       }
       return null;
     } catch (error) {
@@ -189,10 +210,12 @@ const MapContainer: React.FC<MapContainerProps> = ({
         const locationDetails = await getLocationDetails(lat, lng);
         
         if (locationDetails) {
-          // Call the prediction API
+          // Call the prediction API con los nuevos campos requeridos
           const predictionData = {
             LATITUD: lat,
             LONGITUD: lng,
+            TIPO_DE_VIA: locationDetails.tipoDeVia,
+            RED_VIAL: locationDetails.redVial,
             DEPARTAMENTO: locationDetails.departamento,
             PROVINCIA: locationDetails.provincia,
             DISTRITO: locationDetails.distrito
@@ -243,6 +266,8 @@ const MapContainer: React.FC<MapContainerProps> = ({
         
         const fetchedHistoryData = getMockHistoryData();
         setHistoryData(fetchedHistoryData);
+        
+        setIsModalOpen(true);
       } finally {
         setIsLoading(false);
       }
@@ -343,6 +368,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
         }}
       >
         <MarkerClusterer>
+          {/* @ts-ignore */}
           {(clusterer) =>
             <>
               {predictions.map((pred) => (

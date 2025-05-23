@@ -5,13 +5,16 @@ export interface MockPrediction {
   lng: number;
   risk: number; // 0 to 1
   address?: string;
-  severity?: number;
-  dangerProbability?: string;
-  dangerZone?: boolean;
-  riskLevel?: string;
+  severity?: string;
+  probability?: string;
+  probabilityHigh?: string;
+  probabilityLow?: string;
+  typeOfRoad?: string;
+  roadNetwork?: string;
   departamento?: string;
   provincia?: string;
   distrito?: string; 
+  hour?: number;
 }
 
 export interface TimeSeriesDataPoint {
@@ -31,27 +34,30 @@ export interface MockHistoryData {
 
 // Transform API response to our app's format
 export const transformPredictionResponse = (response: PredictionResponse, address?: string): MockPrediction => {
-  // Convert risk string to numerical value between 0-1 for color mapping
+  // Convert severity to numerical risk value for color mapping
   let riskValue = 0;
-  switch (response.RIESGO) {
-    case "BAJO": riskValue = 0.2; break;
-    case "MEDIO": riskValue = 0.5; break;
-    case "ALTO": riskValue = 0.8; break;
+  switch (response.PREDICCION.SEVERIDAD) {
+    case "ALTA": riskValue = 0.8; break;
+    case "MEDIA": riskValue = 0.5; break;
+    case "BAJA": riskValue = 0.2; break;
     default: riskValue = 0.2;
   }
   
   return {
-    lat: response.LATITUD,
-    lng: response.LONGITUD,
+    lat: parseFloat(response.Entrada.LATITUD),
+    lng: parseFloat(response.Entrada.LONGITUD),
     risk: riskValue,
     address: address,
-    severity: response.SEVERIDAD_PREDICHA,
-    dangerProbability: response.PROBABILIDAD_PELIGROSA,
-    dangerZone: response.ZONA_PELIGROSA,
-    riskLevel: response.RIESGO,
-    departamento: response.DEPARTAMENTO,
-    provincia: response.PROVINCIA,
-    distrito: response.DISTRITO
+    severity: response.PREDICCION.SEVERIDAD,
+    probability: response.PREDICCION.PROBABILIDAD,
+    probabilityHigh: response.PREDICCION.PROBABILIDADES.ALTA,
+    probabilityLow: response.PREDICCION.PROBABILIDADES.BAJA,
+    typeOfRoad: response.Entrada.TIPO_DE_VIA,
+    roadNetwork: response.Entrada.RED_VIAL,
+    departamento: response.Entrada.DEPARTAMENTO,
+    provincia: response.Entrada.PROVINCIA,
+    distrito: response.Entrada.DISTRITO,
+    hour: response.Entrada.HORA
   };
 };
 
@@ -61,7 +67,13 @@ export const getMockSinglePrediction = (lat: number, lng: number, geocodedAddres
     lat: lat, 
     lng: lng,
     risk: Math.random(),
-    address: geocodedAddress || `Calle Ficticia ${Math.floor(Math.random() * 1000)}, Lima`, // Use geocoded address or fallback
+    address: geocodedAddress || `Calle Ficticia ${Math.floor(Math.random() * 1000)}, Lima`,
+    severity: Math.random() > 0.5 ? "ALTA" : "BAJA",
+    probability: `${(Math.random() * 100).toFixed(2)}%`,
+    probabilityHigh: `${(Math.random() * 100).toFixed(2)}%`,
+    probabilityLow: `${(Math.random() * 100).toFixed(2)}%`,
+    typeOfRoad: "AVENIDA",
+    roadNetwork: "URBANA"
   };
 };
 

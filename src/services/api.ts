@@ -11,20 +11,37 @@ export const fetchPrediction = (lat: number, lng: number, hora: number | string)
 export const fetchHistory = (lat: number, lng: number) =>
   API.get(`/history?lat=${lat}&lng=${lng}`);
 
-// New API function for prediction using the external backend
-interface PredictionRequest {
+// Nueva interfaz de solicitud que coincide con el body requerido
+export interface PredictionRequest {
   LATITUD: number;
   LONGITUD: number;
+  TIPO_DE_VIA: string;
+  RED_VIAL: string;
   DEPARTAMENTO: string;
   PROVINCIA: string;
   DISTRITO: string;
 }
 
-export interface PredictionResponse extends PredictionRequest {
-  SEVERIDAD_PREDICHA: number;
-  PROBABILIDAD_PELIGROSA: string;
-  ZONA_PELIGROSA: boolean;
-  RIESGO: string;
+// Nueva interfaz de respuesta basada en la estructura actualizada
+export interface PredictionResponse {
+  Entrada: {
+    LATITUD: string;
+    LONGITUD: string;
+    TIPO_DE_VIA: string;
+    RED_VIAL: string;
+    DEPARTAMENTO: string;
+    PROVINCIA: string;
+    DISTRITO: string;
+    HORA: number;
+  };
+  PREDICCION: {
+    SEVERIDAD: string;
+    PROBABILIDAD: string;
+    PROBABILIDADES: {
+      ALTA: string;
+      BAJA: string;
+    };
+  };
 }
 
 export const sendPredictionRequest = async (data: PredictionRequest): Promise<PredictionResponse> => {
