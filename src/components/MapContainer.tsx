@@ -102,11 +102,10 @@ const darkMapStyle: google.maps.MapTypeStyle[] = [
 
 const MapContainer: React.FC<MapContainerProps> = ({
   center = defaultMapCenter, // Use default center if none provided
-  zoom = 12,
+  zoom = 6, // Zoom más amplio para mostrar todo Perú inicialmente
   onPlaceSelected
-}) => {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+}) => {  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '',
     libraries: ['places']
   });
 
@@ -195,11 +194,15 @@ const MapContainer: React.FC<MapContainerProps> = ({
       return null;
     }
   };
-
   const handleMapClick = async (event: google.maps.MapMouseEvent) => {
     if (event.latLng) {
       const lat = event.latLng.lat();
       const lng = event.latLng.lng();
+        // Mejorar la navegación: centrar y hacer zoom al punto seleccionado
+      if (mapRef.current) {
+        mapRef.current.panTo({ lat, lng });
+        mapRef.current.setZoom(18); // Zoom muy específico para ver el área seleccionada con detalle
+      }
       
       setIsLoading(true);
       setError(null);
@@ -293,7 +296,6 @@ const MapContainer: React.FC<MapContainerProps> = ({
     );
     searchBoxRef.current.setBounds(peruBounds);
   };
-
   const onPlacesChanged = () => {
     if (searchBoxRef.current) {
       const places = searchBoxRef.current.getPlaces();
@@ -304,9 +306,10 @@ const MapContainer: React.FC<MapContainerProps> = ({
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng()
           };
-          setCurrentCenter(newCenter);
-          if (mapRef.current) {
+          setCurrentCenter(newCenter);          if (mapRef.current) {
+            // Centrar el mapa y ajustar zoom para una mejor vista
             mapRef.current.panTo(newCenter);
+            mapRef.current.setZoom(17); // Zoom específico para lugares encontrados por búsqueda
           }
           if (onPlaceSelected) {
             onPlaceSelected(place);
@@ -364,8 +367,7 @@ const MapContainer: React.FC<MapContainerProps> = ({
             strictBounds: false,
           },
           mapTypeControl: false,
-          streetViewControl: false,
-        }}
+          streetViewControl: false,        }}
       >
         <MarkerClusterer>
           {/* @ts-ignore */}
@@ -381,8 +383,12 @@ const MapContainer: React.FC<MapContainerProps> = ({
                     fillOpacity: 0.4,
                     strokeColor: getColorForRisk(pred.risk),
                     clickable: true,
-                  }}
-                  onClick={() => {
+                  }}                  onClick={() => {
+                    // Mejorar la navegación al hacer clic en una predicción
+                    if (mapRef.current) {
+                      mapRef.current.panTo({ lat: pred.lat, lng: pred.lng });
+                      mapRef.current.setZoom(18); // Zoom muy específico para ver la ubicación exacta
+                    }
                     setSelectedPrediction(pred);
                     const fetchedHistoryData = getMockHistoryData();
                     setHistoryData(fetchedHistoryData);

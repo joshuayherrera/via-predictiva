@@ -1,7 +1,5 @@
-// src/components/AccidentModal.tsx
 import React from 'react';
 import type { MockPrediction, MockHistoryData } from '../services/data';
-import TimeSeriesChart from './TimeSeriesChart';
 import BarChartModalities from './BarChartModalities';
 
 interface AccidentModalProps {
@@ -15,29 +13,18 @@ interface AccidentModalProps {
 
 const modalStyle: React.CSSProperties = {
   position: 'fixed',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
+  top: '95px', 
+  left: '10px',
   backgroundColor: 'white',
-  padding: '25px',
+  padding: '20px',
   borderRadius: '10px',
-  boxShadow: '0 5px 15px rgba(0,0,0,0.2)',
+  boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
   zIndex: 1000,
-  width: '90%',
-  maxWidth: '650px',
-  maxHeight: '90vh',
+  width: '450px',
+  maxHeight: 'calc(100vh - 90px)', 
   overflowY: 'auto',
   fontFamily: 'Arial, sans-serif',
-};
-
-const backdropStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0,
-  left: 0,
-  width: '100%',
-  height: '100%',
-  backgroundColor: 'rgba(0,0,0,0.6)',
-  zIndex: 999,
+  border: '2px solid #e0e0e0',
 };
 
 // Función para convertir valor de riesgo numérico a color
@@ -64,137 +51,140 @@ const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, predicti
   }
 
   return (
-    <>
-      <div style={backdropStyle} onClick={onClose} />
-      <div style={modalStyle}>
-        <button 
-          onClick={onClose} 
-          style={{ 
-            position: 'absolute',
-            top: '15px',
-            right: '15px',
-            background: 'none', 
-            border: 'none', 
-            fontSize: '1.8rem', 
-            cursor: 'pointer',
-            color: '#777'
-          }}
-        >
-          &times;
-        </button>
-        <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
-          Análisis de Riesgo de Accidente
-        </h2>
-        
-        {isLoading && (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <p>Cargando predicción...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div style={{ textAlign: 'center', padding: '10px', backgroundColor: '#ffebee', color: '#c62828', borderRadius: '4px', marginBottom: '15px' }}>
-            <p>{error}</p>
-          </div>
-        )}
-        
-        {prediction && !isLoading && (
-          <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '6px' }}>
-            <p><strong>Ubicación:</strong> Lat: {prediction.lat.toFixed(5)}, Lng: {prediction.lng.toFixed(5)}</p>
-            <p><strong>Dirección Estimada:</strong> {prediction.address || 'No disponible'}</p>
-            
-            {prediction.typeOfRoad && prediction.roadNetwork && (
-              <p><strong>Tipo de Vía:</strong> {prediction.typeOfRoad} - {prediction.roadNetwork}</p>
-            )}
-            
-            {prediction.departamento && (
-              <p><strong>Región:</strong> {prediction.departamento}, {prediction.provincia}, {prediction.distrito}</p>
-            )}
+    <div style={modalStyle}>
+      <button 
+        onClick={onClose} 
+        style={{ 
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          background: 'none', 
+          border: 'none', 
+          fontSize: '1.5rem', 
+          cursor: 'pointer',
+          color: '#777',
+          padding: '0',
+          width: '25px',
+          height: '25px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        &times;
+      </button>
+      <h2 style={{ textAlign: 'center', color: '#333', marginBottom: '20px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>
+        Análisis de Riesgo de Accidente
+      </h2>
+      
+      {isLoading && (
+        <div style={{ textAlign: 'center', padding: '20px' }}>
+          <p>Cargando predicción...</p>
+        </div>
+      )}
+      
+      {error && (
+        <div style={{ textAlign: 'center', padding: '10px', backgroundColor: '#ffebee', color: '#c62828', borderRadius: '4px', marginBottom: '15px' }}>
+          <p>{error}</p>
+        </div>
+      )}
+      
+      {prediction && !isLoading && (
+        <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '6px' }}>
+          <p><strong>Ubicación:</strong> Lat: {prediction.lat.toFixed(5)}, Lng: {prediction.lng.toFixed(5)}</p>
+          <p><strong>Dirección Estimada:</strong> {prediction.address || 'No disponible'}</p>
+          
+          {prediction.typeOfRoad && prediction.roadNetwork && (
+            <p><strong>Tipo de Vía:</strong> {prediction.typeOfRoad} - {prediction.roadNetwork}</p>
+          )}
+          
+          {prediction.departamento && (
+            <p><strong>Región:</strong> {prediction.departamento}, {prediction.provincia}, {prediction.distrito}</p>
+          )}
 
-            {prediction.severity && (
-              <p style={{ marginTop: '10px' }}>
-                <strong>Severidad Predicha: </strong> 
-                <span style={{ 
-                  color: getSeverityColor(prediction.severity), 
-                  fontWeight: 'bold',
-                  padding: '3px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: getSeverityColor(prediction.severity) + '20' // Light background tint
-                }}>
-                  {prediction.severity}
-                </span>
-              </p>
-            )}
-
-            {prediction.probability && (
-              <p><strong>Probabilidad General:</strong> {prediction.probability}</p>
-            )}
-            
-            {(prediction.probabilityHigh || prediction.probabilityLow) && (
-              <div style={{ 
-                marginTop: '15px',
-                border: '1px solid #e0e0e0',
-                padding: '10px',
+          {prediction.severity && (
+            <p style={{ marginTop: '10px' }}>
+              <strong>Severidad Predicha: </strong> 
+              <span style={{ 
+                color: getSeverityColor(prediction.severity), 
+                fontWeight: 'bold',
+                padding: '3px 8px',
                 borderRadius: '4px',
-                backgroundColor: '#f5f5f5'
+                backgroundColor: getSeverityColor(prediction.severity) + '20' // Light background tint
               }}>
-                <p style={{ marginBottom: '8px', fontWeight: 'bold' }}>Detalle de Probabilidades:</p>
-                {prediction.probabilityHigh && (
-                  <p style={{ 
-                    marginLeft: '10px', 
-                    color: getSeverityColor('ALTA'),
-                    fontWeight: 'bold'
-                  }}>
-                    Alta: {prediction.probabilityHigh}
-                  </p>
-                )}
-                {prediction.probabilityLow && (
-                  <p style={{ 
-                    marginLeft: '10px',
-                    color: getSeverityColor('BAJA'),
-                    fontWeight: 'bold'
-                  }}>
-                    Baja: {prediction.probabilityLow}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+                {prediction.severity}
+              </span>
+            </p>
+          )}
 
-        {!prediction && !isLoading && (
-          <p style={{ textAlign: 'center', color: '#666' }}>No hay datos de predicción para el punto seleccionado.</p>
-        )}
+          {prediction.probability && (
+            <p><strong>Probabilidad General:</strong> {prediction.probability}</p>
+          )}
+          
+          {(prediction.probabilityHigh || prediction.probabilityLow) && (
+            <div style={{ 
+              marginTop: '15px',
+              border: '1px solid #e0e0e0',
+              padding: '10px',
+              borderRadius: '4px',
+              backgroundColor: '#f5f5f5'
+            }}>
+              <p style={{ marginBottom: '8px', fontWeight: 'bold' }}>Detalle de Probabilidades:</p>
+              {prediction.probabilityHigh && (
+                <p style={{ 
+                  marginLeft: '10px', 
+                  color: getSeverityColor('ALTA'),
+                  fontWeight: 'bold'
+                }}>
+                  Alta: {prediction.probabilityHigh}
+                </p>
+              )}
+              {prediction.probabilityLow && (
+                <p style={{ 
+                  marginLeft: '10px',
+                  color: getSeverityColor('BAJA'),
+                  fontWeight: 'bold'
+                }}>
+                  Baja: {prediction.probabilityLow}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
-        {historyData ? (
-          <>
-            <TimeSeriesChart data={historyData.timeSeries} />
-            <BarChartModalities data={historyData.modalities} />
-          </>
-        ) : (
-          <p style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Cargando datos históricos...</p>
-        )}
-        
-        <button 
-          onClick={onClose} 
-          style={{ 
-            marginTop: '25px', 
-            padding: '12px 25px', 
-            backgroundColor: '#007bff', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '5px', 
-            cursor: 'pointer',
-            display: 'block',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-            fontSize: '1rem'
-          }}
-        >
-          Cerrar
-        </button>
-      </div>
-    </>
+      {!prediction && !isLoading && (
+        <p style={{ textAlign: 'center', color: '#666' }}>No hay datos de predicción para el punto seleccionado.</p>
+      )}
+
+      {historyData ? (
+        <>
+          
+          <BarChartModalities data={historyData.modalities} />
+        </>
+      ) : (
+        <p style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Cargando datos históricos...</p>
+      )}
+      
+      <button 
+        onClick={onClose} 
+        style={{ 
+          marginTop: '25px', 
+          padding: '12px 25px', 
+          backgroundColor: '#007bff', 
+          color: 'white', 
+          border: 'none', 
+          borderRadius: '5px', 
+          cursor: 'pointer',
+          display: 'block',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+          fontSize: '1rem'
+        }}
+      >
+        Cerrar
+      </button>
+    </div>
   );
 };
 
