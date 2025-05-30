@@ -1,4 +1,4 @@
-import type { PredictionResponse } from './api';
+import type { PredictionResponse, HourlyPredictionResponse } from './api';
 
 export interface MockPrediction {
   lat: number;
@@ -20,6 +20,7 @@ export interface MockPrediction {
 export interface TimeSeriesDataPoint {
   hora: number; // 0-23
   count: number;
+  probability?: number; // Nueva propiedad para probabilidades reales
 }
 
 export interface ModalityDataPoint {
@@ -31,6 +32,24 @@ export interface MockHistoryData {
   timeSeries: TimeSeriesDataPoint[];
   modalities: ModalityDataPoint[];
 }
+
+// Transform hourly prediction response to TimeSeriesDataPoint array
+export const transformHourlyPredictionResponse = (response: HourlyPredictionResponse): TimeSeriesDataPoint[] => {
+  const timeSeriesData: TimeSeriesDataPoint[] = [];
+  
+  for (let hour = 0; hour < 24; hour++) {
+    const hourStr = hour.toString();
+    const probability = response.PROBABILIDADES_HORAS[hourStr] || 0;
+    
+    timeSeriesData.push({
+      hora: hour,
+      count: Math.round(probability * 100), // Convert probability to percentage for display
+      probability: probability
+    });
+  }
+  
+  return timeSeriesData;
+};
 
 // Transform API response to our app's format
 export const transformPredictionResponse = (response: PredictionResponse, address?: string): MockPrediction => {

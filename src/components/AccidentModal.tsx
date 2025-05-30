@@ -1,6 +1,9 @@
-import React from 'react';
-import type { MockPrediction, MockHistoryData } from '../services/data';
+import React, { useEffect, useState } from 'react';
+import type { MockPrediction, MockHistoryData, TimeSeriesDataPoint } from '../services/data';
+import { fetchHourlyPredictions, type HourlyPredictionResponse } from '../services/api';
+import { transformHourlyPredictionResponse } from '../services/data';
 import BarChartModalities from './BarChartModalities';
+import TimeSeriesChart from './TimeSeriesChart';
 
 interface AccidentModalProps {
   isOpen: boolean;
@@ -46,6 +49,46 @@ const getSeverityColor = (severity: string): string => {
 };
 
 const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, prediction, historyData, isLoading, error }) => {
+  const [hourlyData, setHourlyData] = useState<TimeSeriesDataPoint[] | null>(null);
+  const [hourlyLoading, setHourlyLoading] = useState(false);
+  const [hourlyError, setHourlyError] = useState<string | null>(null);
+  // Fetch hourly predictions when modal opens and prediction is available
+  useEffect(() => {
+    if (isOpen && prediction?.distrito) {
+      const fetchHourlyData = async () => {
+        setHourlyLoading(true);
+        setHourlyError(null);
+        try {
+          // Ensure distrito is not undefined
+          const distrito = prediction.distrito!;
+          const response: HourlyPredictionResponse = await fetchHourlyPredictions(distrito);
+          const transformedData = transformHourlyPredictionResponse(response);
+          setHourlyData(transformedData);
+        } catch (err) {
+          console.error('Error fetching hourly predictions:', err);
+          setHourlyError('Error al cargar predicciones horarias');
+          // Fallback to mock data if API fails
+          if (historyData?.timeSeries) {
+            setHourlyData(historyData.timeSeries);
+          }
+        } finally {
+          setHourlyLoading(false);
+        }
+      };
+
+      fetchHourlyData();
+    }
+  }, [isOpen, prediction?.distrito, historyData?.timeSeries]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHourlyData(null);
+      setHourlyError(null);
+      setHourlyLoading(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
@@ -151,18 +194,54 @@ const AccidentModal: React.FC<AccidentModalProps> = ({ isOpen, onClose, predicti
             </div>
           )}
         </div>
-      )}
-
-      {!prediction && !isLoading && (
+      )}      {!prediction && !isLoading && (
         <p style={{ textAlign: 'center', color: '#666' }}>No hay datos de predicción para el punto seleccionado.</p>
+      )}      
+      {/* Hourly Predictions Chart - Solo se muestra si hay distrito disponible */}
+      {prediction?.distrito && (
+        <>
+          {hourlyLoading && (
+            <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f0f8ff', borderRadius: '6px', marginBottom: '15px' }}>
+              <p>Cargando predicciones horarias para {prediction.distrito}...</p>
+            </div>
+          )}
+          
+          {hourlyError && (
+            <div style={{ textAlign: 'center', padding: '10px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '4px', marginBottom: '15px' }}>
+              <p>{hourlyError}</p>
+            </div>
+          )}
+
+          {hourlyData && !hourlyLoading && (
+            <TimeSeriesChart 
+              data={hourlyData} 
+              title={`Predicción Horaria - ${prediction.distrito}`}
+            />
+          )}
+        </>
       )}
 
-      {historyData ? (
-        <>
-          
-          <BarChartModalities data={historyData.modalities} />
-        </>
-      ) : (
+      {/* Mostrar mensaje cuando no hay distrito disponible */}
+      {prediction && !prediction.distrito && (
+        <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '6px', marginBottom: '15px' }}>
+          <p>No se pueden cargar predicciones horarias sin información de distrito</p>
+        </div>
+      )}      {/* Modality Chart - Solo se muestra si hay distrito disponible */}
+      {prediction?.distrito && historyData && (
+        <BarChartModalities 
+          data={historyData.modalities} 
+          title={`Modalidades de Accidentes - ${prediction.distrito}`}
+        />
+      )}
+
+      {/* Mostrar mensaje cuando no hay distrito disponible para modalidades */}
+      {prediction && !prediction.distrito && (
+        <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#fff3cd', color: '#856404', borderRadius: '6px', marginTop: '15px' }}>
+          <p>No se pueden cargar datos de modalidades sin información de distrito</p>
+        </div>
+      )}
+      
+      {!historyData && !hourlyData && !hourlyLoading && !isLoading && prediction?.distrito && (
         <p style={{ textAlign: 'center', color: '#666', marginTop: '20px' }}>Cargando datos históricos...</p>
       )}
       

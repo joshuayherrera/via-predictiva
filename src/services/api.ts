@@ -64,3 +64,35 @@ export const sendPredictionRequest = async (data: PredictionRequest): Promise<Pr
     throw error;
   }
 };
+
+// Nueva interfaz para la respuesta de horarios
+export interface HourlyPredictionResponse {
+  DISTRITO: string;
+  PROBABILIDADES_HORAS: {
+    [hour: string]: number;
+  };
+}
+
+// Nueva función para obtener predicciones horarias
+export const fetchHourlyPredictions = async (distrito: string): Promise<HourlyPredictionResponse> => {
+  try {
+    const response = await fetch('https://via-predictiva-tagname.onrender.com/predecir/horarios', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        DISTRITO: distrito
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status}`);
+    }
+
+    return await response.json() as HourlyPredictionResponse;
+  } catch (error) {
+    console.error('Error calling hourly prediction API:', error);
+    throw error;
+  }
+};
